@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "amted_server.h"
+#include "threadpool.h"
 
 static int setNonBlocking(int sock)
 {
@@ -25,12 +26,27 @@ static int setNonBlocking(int sock)
 	return 1;
 }
 
+int check_exist(char *path) {
+	int str_len = strlen(path);
+	path[str_len - 1] = '\0';
+
+	if (access(path, F_OK))
+		return 0;
+
+	return 1;
+}
+/*static void readFile()
+{
+	printf("Hello world!\n");
+}*/
+
 int main(int argc, char **argv)
 {
 	int listenfd = 0, connfd = 0, epfd, i, nfds, sockfd, n;
 	struct sockaddr_in serv_addr;
 	char *recvBuff;
 	struct epoll_event ev, events[EPOLL_NUM];
+	threadpool pool;
 
 	if (argc != 3) {
 		printf("Usage: <%s> <IPv4 address> <port number>\n", argv[0]);
@@ -73,8 +89,14 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	//Create work thread pool
+	//pool = create_threadpool(MAXT_IN_POOL);
+	//for (i = 0; i < 10; i++)
+	//	dispatch(pool, readFile,(void *)NULL);
+	//destroy_threadpool(pool);
+
 	for (;;) {
-		if ((nfds = epoll_wait(epfd, events, EPOLL_NUM, 1000)) < 0) {
+		if ((nfds = epoll_wait(epfd, events, EPOLL_NUM, -1)) < 0) {
 			perror("epoll_wait");
 			return 0;
 		}
@@ -94,27 +116,33 @@ int main(int argc, char **argv)
 					perror("epoll_ctl");
 					return 0;
 				}
-			} else if (events[i].events & EPOLLIN) { //Old connection Read
+			} else if (events[i].events & EPOLLIN) { // Read
 				if ((sockfd = events[i].data.fd) < 0)
 					continue;
 
 				if ((n = read(sockfd, recvBuff, PATH_LENGTH)) < 0) {
 					perror("read");
 					close(sockfd);
-				} else if ( n == 0) {
+				} else if (n == 0) {
 					close(sockfd);
 					events[i].data.fd = -1;
-				} else
-					printf("Client read path: %s", recvBuff);
+				} else {
+					if (check_exist(recvBuff)) {
+						printf("Exist\n");
+					} else {
+						printf("The file %s doesn't exist!\n", recvBuff);
+						continue;
+					}
+				}
 
 				ev.data.fd = sockfd;
 				ev.events = EPOLLOUT | EPOLLET;
 				epoll_ctl(epfd, EPOLL_CTL_MOD, sockfd, &ev);
-			} else if (events[i].events & EPOLLOUT) { //Old connectionWrite
+			} else if (events[i].events & EPOLLOUT) { // Write
 				if ((sockfd = events[i].data.fd) < 0)
 					continue;
 
-				write(sockfd, "TEST", 4);
+				write(sockfd, "TEST\n", 5);
 				ev.data.fd = sockfd;
 				ev.events = EPOLLIN | EPOLLET;
 				epoll_ctl(epfd, EPOLL_CTL_MOD, sockfd, &ev);
@@ -122,6 +150,5 @@ int main(int argc, char **argv)
 				;
 		}
 	}
-
 	return 0;
 }

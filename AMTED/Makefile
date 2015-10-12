@@ -1,7 +1,7 @@
 CC := gcc
 CFLAGS :=
-SRCS := amted_server.c
-LIBS :=
+SRCS := amted_server.c threadpool.c
+LIBS := -lpthread
 TARGET := 550server
 
 .DEFAULT_GOAL := $(TARGET)
