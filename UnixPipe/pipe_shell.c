@@ -4,6 +4,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "pipe_shell.h"
 

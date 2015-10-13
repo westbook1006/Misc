@@ -12,4 +12,7 @@
 ** pthread_mutex_unlock, pthread_cond_init, pthread_cond_wait, pthread_cond_signal, 
 ** pthread_cond_broadcast, pthread_mutex_destroy,pthread_cond_destroy --> pthread management
 ** (6) access --> check the file existence
+** (7) pipe --> communicate between threads
+** (8) open, close, read, write --> file system management operations
+** (9) sigaction --> signal handler
 */

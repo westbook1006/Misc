@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include "threadpool.h"
+#include "amted_server.h"
 
 typedef struct _work_t{
-	void (*routine) (void*);
+	void (*routine) (node*);
 	void *arg;
 	struct _work_t *next;
 } work_t;
@@ -27,7 +28,6 @@ static void* do_work(threadpool p)
 	_threadpool *pool = (_threadpool *)p;
 	work_t* cur;
 
-	printf("One thread has been created!\n");
 	while (1) {
 		pthread_mutex_lock(&(pool->qlock));
 		while (pool->qsize == 0) {
@@ -109,17 +109,13 @@ threadpool create_threadpool(int num_threads_in_pool)
 		}
 	}
 
-	printf("Thread pool create successfully!\n");
-
 	return (threadpool)pool;
 }
 
-void dispatch(threadpool th_pool, dispatch_fn fn_dispatch, void *arg)
+void dispatch(threadpool th_pool, dispatch_fn fn_dispatch, node *arg)
 {
 	_threadpool *pool = (_threadpool *)th_pool;
 	work_t *cur;
-
-	printf("Add a work\n");
 
 	cur = (work_t*)malloc(sizeof(work_t));
 	if (!cur)
@@ -155,16 +151,13 @@ void destroy_threadpool(threadpool th_pool)
 
 	pthread_mutex_lock(&(pool->qlock));
 	pool->dont_accept = 1;
-	printf("Test1\n");
 	while (pool->qsize) {
 		pthread_cond_wait(&(pool->q_empty), &(pool->qlock));
 	}
-	printf("Test3\n");
 	pool->shutdown = 1;
 	pthread_cond_broadcast(&(pool->q_not_empty));
 	pthread_mutex_unlock(&(pool->qlock));
 	
-	printf("Test2\n");
 	for (i = 0; i < pool->num_threads; i++)
 		pthread_join(pool->threads[i], &nothing);
 	
@@ -172,5 +165,6 @@ void destroy_threadpool(threadpool th_pool)
 	pthread_mutex_destroy(&(pool->qlock));
 	pthread_cond_destroy(&(pool->q_empty));
 	pthread_cond_destroy(&(pool->q_not_empty));
-	printf("Destory the threadpool\n");
+
+	printf("destroy everything\n");
 }
