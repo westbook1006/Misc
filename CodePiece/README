@@ -1,3 +1,5 @@
 /*
  * This directory saves a set of code pieces.
  */
+pthread_cond.c --> A good example from memcached implementation about pthread
+                   conditional variable.
