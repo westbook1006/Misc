@@ -4,3 +4,4 @@ Misc: Other stuffs I have done
 * AMTED --> A simple asymmetric multi-threaded event driven file server (AMTED)
 * CodePiece --> Some simple code pieces
 * minHash --> A random approxmiation algorithm
+* LFHT --> A lock-free hashtable implementation
