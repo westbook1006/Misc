@@ -13,22 +13,22 @@ hashtable_init()
 }
 
 int
-hashtable_insert()
+hashtable_insert(char *key, char *value)
 {
-    printf("Hashtable insert\n");
+    printf("HT INSERT key: %s value: %s\n", key, value);
     return 0;
 }
 
 int 
-hashtable_search()
+hashtable_search(char *key)
 {
-    printf("Hashtable search\n");
+    printf("HT SEARCH key: %s\n", key);
     return 0;
 }
 
 int 
-hashtable_delete()
+hashtable_delete(char *key)
 {
-    printf("Hashtable delete\n");
+    printf("HT DELETE key: %s\n", key);
     return 0;
 }

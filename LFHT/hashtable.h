@@ -5,8 +5,8 @@
 #define _HASHTABLE_H_
 
 int hashtable_init();
-int hashtable_insert();
-int hashtable_search();
-int hashtable_delete();
+int hashtable_insert(char *key, char *value);
+int hashtable_search(char *key);
+int hashtable_delete(char *key);
 
 #endif
