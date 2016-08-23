@@ -17,7 +17,7 @@ enum {INSERT, SEARCH, DELETE} ht_command;
 
 #define KEY_LEN 9 
 #define VALUE_LEN 17
-#define THREAD_NUM 2
+#define THREAD_NUM 24
 #define TOTAL_REQUEST 10
 
 static void *
@@ -32,7 +32,8 @@ ht_test(void *arg)
     memset(value, 0x0, VALUE_LEN);
 
     for (int i = 0; i < TOTAL_REQUEST; i++) {
-        int cmd = random() % 3;
+        //int cmd = random() % 3;
+        int cmd = 0;
         int user_id = random() % 90 + 10;
         sprintf(key, "USERHT%d", user_id);
 
@@ -89,6 +90,8 @@ main(int argc, char **argv)
     }
 
     free(tinfo);
+
+    hashtable_dump();
 
     return 0;
 }

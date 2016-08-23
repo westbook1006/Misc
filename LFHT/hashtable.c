@@ -6,21 +6,24 @@
  */
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include "util.h"
 
 #define KEY_LEN 9 
 #define VALUE_LEN 17
+#define BUCKET_SIZE 8
 
-typedef uintptr_t marked_ptr_t;
+//#define HT_DEBUG
 
 typedef struct _node {
     char key[KEY_LEN];
     char value[VALUE_LEN];
-    marked_ptr_t next;
+    struct _node *next;
 } __attribute__((packed)) node;
 
 typedef struct _table {
-    marked_ptr_t buckets[1024];
+    node* buckets[BUCKET_SIZE];
     uint32_t size;
 } __attribute__((packed)) LF_hashtable;
 
@@ -36,13 +39,34 @@ hashtable_init()
 int
 hashtable_insert(char *key, char *value)
 {
-    uint32_t index = jenkins_hash(key, KEY_LEN);
-    marked_ptr_t new_node, prev, cur, head;
+    node *new_node, **prev, *cur;
+    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
+
+    new_node = (node *)malloc(sizeof(node));
+    strcpy(new_node->key, key);
+    strcpy(new_node->value, value);
 
     while (1) {
+        cur = lf_table.buckets[index];
+        prev = &lf_table.buckets[index];
+
+        //printf("keep adding stuffs\n");
+        while ((cur != NULL) && (strcmp(cur->key, key) > 0)) {
+            prev = &cur->next;
+            cur = cur->next;
+        }
+
+        new_node->next = *prev;
+        if (__sync_val_compare_and_swap(prev, cur, new_node) == cur) {
+            break;
+        }
     }
 
-    //printf("HT INSERT key: %s value: %s\n", key, value);
+    __sync_fetch_and_add(&lf_table.size, 1);
+
+#ifdef HT_DEBUG
+    printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
+#endif
     return 0;
 }
 
@@ -57,5 +81,32 @@ int
 hashtable_delete(char *key)
 {
     printf("HT DELETE key: %s\n", key);
+    return 0;
+}
+
+int
+hashtable_dump()
+{
+    printf("Hashtable size is %d\n", lf_table.size);
+    for (int i = 0; i < BUCKET_SIZE; i++) {
+        node *head = lf_table.buckets[i];
+
+        uint32_t cnt = 0;
+        while (head != NULL) {
+            cnt++;
+            head = head->next;
+        }
+        printf("Bucket %d has %d items\n", i, cnt);
+
+#if 0
+        printf("Bucket %d BEGIN: ", i);
+        while (head != NULL) {
+            printf("<key: %s, value: %s> --> ", head->key, head->value);
+            head = head->next;
+        }
+        printf("END\n");
+#endif
+    }
+
     return 0;
 }
