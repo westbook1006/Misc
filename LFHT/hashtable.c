@@ -14,7 +14,7 @@
 #define VALUE_LEN 17
 #define BUCKET_SIZE 8
 
-//#define HT_DEBUG
+#define HT_DEBUG
 
 typedef struct _node {
     char key[KEY_LEN];
@@ -42,6 +42,10 @@ hashtable_insert(char *key, char *value)
     node *new_node, **prev, *cur;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
 
+#ifdef HT_DEBUG
+    printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
+#endif
+
     new_node = (node *)malloc(sizeof(node));
     strcpy(new_node->key, key);
     strcpy(new_node->value, value);
@@ -50,10 +54,16 @@ hashtable_insert(char *key, char *value)
         cur = lf_table.buckets[index];
         prev = &lf_table.buckets[index];
 
-        //printf("keep adding stuffs\n");
         while ((cur != NULL) && (strcmp(cur->key, key) > 0)) {
             prev = &cur->next;
             cur = cur->next;
+        }
+
+        // Update when the key has been saved.
+        if ((cur != NULL) && (!strcmp(cur->key, key))) {
+            strcpy(cur->value, value);
+            free(new_node);
+            return 0;
         }
 
         new_node->next = *prev;
@@ -64,17 +74,44 @@ hashtable_insert(char *key, char *value)
 
     __sync_fetch_and_add(&lf_table.size, 1);
 
-#ifdef HT_DEBUG
-    printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
-#endif
     return 0;
 }
 
-int 
+char* 
 hashtable_search(char *key)
 {
-    printf("HT SEARCH key: %s\n", key);
-    return 0;
+    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
+    node *cur, **prev, **next;
+    char *cur_key, *cur_value;
+
+#ifdef HT_DEBUG
+    printf("HT SEARCH key: %s bucket index: %d\n", key, index);
+#endif
+
+    while (1) {
+        prev = &lf_table.buckets[index];
+        cur = lf_table.buckets[index];
+
+        while (1) {
+            if (!cur)
+                return NULL;
+
+            next = &cur->next;
+            cur_key = cur->key;
+            cur_value = cur->value;
+
+            if (*prev != cur)
+                break;
+
+            if (!strcmp(cur_key, key))
+                return cur_value;
+
+            prev = next;
+            cur = *next;
+        }
+    }
+
+    return NULL;
 }
 
 int 
@@ -98,7 +135,8 @@ hashtable_dump()
         }
         printf("Bucket %d has %d items\n", i, cnt);
 
-#if 0
+#if 1 
+        head = lf_table.buckets[i];
         printf("Bucket %d BEGIN: ", i);
         while (head != NULL) {
             printf("<key: %s, value: %s> --> ", head->key, head->value);

@@ -18,7 +18,7 @@ enum {INSERT, SEARCH, DELETE} ht_command;
 #define KEY_LEN 9 
 #define VALUE_LEN 17
 #define THREAD_NUM 24
-#define TOTAL_REQUEST 10
+#define TOTAL_REQUEST 20
 
 static void *
 ht_test(void *arg)
@@ -39,11 +39,45 @@ ht_test(void *arg)
 
         switch(cmd) {
             case INSERT: {hashtable_insert(key, value); break;}
-            case SEARCH: {hashtable_search(key); break;}
+            case SEARCH: {
+                             char *get_value = hashtable_search(key);
+
+                             if (get_value)
+                                 printf("HIT: Key %s Value %s\n", key, get_value);
+                             else
+                                 printf("MISS: Key %s\n", key);
+
+                             break;
+                         }
             case DELETE: {hashtable_delete(key); break;}
             default: break;
         }
     }
+
+#if 0
+    for (int i = 0; i < TOTAL_REQUEST; i++) {
+        //int cmd = random() % 3;
+        int cmd = 1;
+        int user_id = random() % 90 + 10;
+        sprintf(key, "USERHT%d", user_id);
+
+        switch(cmd) {
+            case INSERT: {hashtable_insert(key, value); break;}
+            case SEARCH: {
+                             char *get_value = hashtable_search(key);
+
+                             if (get_value)
+                                 printf("HIT: Key %s Value %s\n", key, get_value);
+                             else
+                                 printf("MISS: Key %s\n", key);
+
+                             break;
+                         }
+            case DELETE: {hashtable_delete(key); break;}
+            default: break;
+        }
+    }
+#endif
 }
 
 int 
