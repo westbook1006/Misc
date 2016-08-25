@@ -1,6 +1,8 @@
 /*
  * Test program
  */
+#include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,19 +15,27 @@ struct thread_info {
     int thread_num;
 };
 
-enum {INSERT, SEARCH, DELETE} ht_command;
+enum {INSERT, FIND, DELETE} ht_command;
 
-#define KEY_LEN 9 
-#define VALUE_LEN 9
-#define THREAD_NUM 1
-#define TOTAL_REQUEST 1000
+#define KEY_LEN 11 
+//#define VALUE_LEN 64
+#define VALUE_LEN 1024
+#define TOTAL_REQUEST 1000000
 
-uint32_t total_access;
-uint32_t hit_access;
+uint64_t total_find;
+uint64_t hit_find;
+uint64_t total_insert;
+uint64_t total_delete;
+
+uint64_t total_find_time;
+uint64_t total_insert_time;
+uint64_t total_delete_time;
 
 static void *
 ht_test(void *arg)
 {
+    struct timeval start, end;
+    uint64_t elapsed_time;
     char key[KEY_LEN]; 
     char value[VALUE_LEN];
     struct thread_info *tinfo = arg;
@@ -37,24 +47,55 @@ ht_test(void *arg)
 
     for (int i = 0; i < TOTAL_REQUEST; i++) {
         int cmd = random() % 3;
-        //int cmd = 0;
-        int user_id = random() % 90 + 10;
+        int user_id = random() % 9000 + 1000;
         sprintf(key, "USERHT%d", user_id);
-        //sprintf(key, "USERHT11");
 
         switch(cmd) {
-            case INSERT: {hashtable_insert(key, value); break;}
-            case SEARCH: {
-                             char *get_value = hashtable_find(key);
+            case INSERT: {
+                             gettimeofday(&start, NULL);
+                             hashtable_insert(key, value); 
+                             gettimeofday(&end, NULL);
 
-                             __sync_fetch_and_add(&total_access, 1);
+                             elapsed_time = end.tv_sec * 1000000 + end.tv_usec -
+                                 (start.tv_sec * 1000000 - start.tv_usec);
+                             __sync_fetch_and_add(&total_insert_time, 
+                                     elapsed_time);
 
-                             if (get_value)
-                                 __sync_fetch_and_add(&hit_access, 1);
+                             __sync_fetch_and_add(&total_insert, 1);
 
                              break;
                          }
-            case DELETE: {hashtable_delete(key); break;}
+            case FIND: {
+                             gettimeofday(&start, NULL);
+                             char *get_value = hashtable_find(key);
+                             gettimeofday(&end, NULL);
+
+                             elapsed_time = end.tv_sec * 1000000 + end.tv_usec -
+                                 (start.tv_sec * 1000000 - start.tv_usec);
+                             __sync_fetch_and_add(&total_find_time, 
+                                     elapsed_time); 
+
+                             __sync_fetch_and_add(&total_find, 1);
+
+                             if (get_value)
+                                 __sync_fetch_and_add(&hit_find, 1);
+
+                             break;
+                         }
+            case DELETE: {
+                             gettimeofday(&start, NULL);
+                             hashtable_delete(key);
+                             gettimeofday(&end, NULL);
+
+                             elapsed_time = end.tv_sec * 1000000 + end.tv_usec -
+                                 (start.tv_sec * 1000000 - start.tv_usec);
+                             __sync_fetch_and_add(&total_delete_time, 
+                                     elapsed_time); 
+
+                             __sync_fetch_and_add(&total_delete, 1);
+
+                             break;
+                         }
             default: break;
         }
     }
@@ -64,6 +105,11 @@ ht_test(void *arg)
 int 
 main(int argc, char **argv)
 {
+    if (argc != 2) {
+        printf("Usage: <%s> <number of threads>\n", argv[0]);
+        return 0;
+    }
+
     struct thread_info *tinfo;
     pthread_attr_t attr;
 
@@ -76,13 +122,13 @@ main(int argc, char **argv)
         return 0;
     }
 
-    tinfo = calloc(THREAD_NUM, sizeof(struct thread_info));
+    tinfo = calloc(atoi(argv[1]), sizeof(struct thread_info));
     if (tinfo == NULL) {
         perror("calloc failed");
         return 0;
     }
 
-    for (int i = 0; i < THREAD_NUM; i++) {
+    for (int i = 0; i < atoi(argv[1]); i++) {
         tinfo[i].thread_num = i;
 
         if (pthread_create(&tinfo[i].thread_id, &attr, &ht_test, &tinfo[i]) 
@@ -97,7 +143,7 @@ main(int argc, char **argv)
         return 0;
     }
 
-    for (int i = 0; i < THREAD_NUM; i++) {
+    for (int i = 0; i < atoi(argv[1]); i++) {
         if (pthread_join(tinfo[i].thread_id, NULL) != 0) {
             perror("pthread_join failed");
             return 0;
@@ -106,9 +152,17 @@ main(int argc, char **argv)
 
     free(tinfo);
 
-    hashtable_dump();
+    //hashtable_dump();
+
+    printf("Hashtable execution statistics:\n");
+    printf("Hashtable insert time: %lf\n", 
+            (total_insert_time + 0.0) / (total_insert + 0.0));
+    printf("Hashtable delete time: %lf\n",
+            (total_delete_time + 0.0) / (total_delete + 0.0));
+    printf("Hashtable find time: %lf\n",
+            (total_find_time + 0.0) / (total_find + 0.0));
     printf("Test case hit rate is %lf\n", 
-            (hit_access + 0.0) / (total_access + 0.0));
+            (hit_find + 0.0) / (total_find + 0.0));
 
     return 0;
 }

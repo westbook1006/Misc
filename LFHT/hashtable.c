@@ -87,7 +87,8 @@ internal_hashtable_search(char *key, node **left_node, int index)
 
         /* Step 3: Remove one or more marked nodes */
         if (CAS(&((*left_node)->next), left_node_next, right_node)) {
-            // TODO: free left_node_next
+            // TODO: push back to the free pool
+            free(left_node_next);
             INC(&lf_table.size, -1);
 
             if ((right_node != tail) && is_marked_reference(right_node->next))
@@ -106,6 +107,7 @@ hashtable_insert(char *key, char *value)
 #ifdef HT_DEBUG
     printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
 #endif
+    //TODO: allocate from the free pool
     new_node = (node *)malloc(sizeof(node));
     strcpy(new_node->key, key);
     strcpy(new_node->value, value);
@@ -158,7 +160,8 @@ hashtable_delete(char *key)
     if (!CAS(&(left_node->next), right_node, right_node_next)) {
         right_node = internal_hashtable_search(key, &left_node, index);
     } else {
-        //TODO: free right_node
+        //TODO: push back to the free pool
+        free(right_node);
         INC(&lf_table.size, -1);
     }
 
@@ -182,86 +185,6 @@ hashtable_find(char *key)
     else
         return right_node->value;
 }
-
-#if 0
-
-char* 
-hashtable_search(char *key)
-{
-    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
-    node *cur, **prev, **next;
-    char *cur_key, *cur_value;
-
-#ifdef HT_DEBUG
-    printf("HT SEARCH key: %s bucket index: %d\n", key, index);
-#endif
-
-    while (1) {
-        prev = &lf_table.buckets[index];
-        cur = lf_table.buckets[index];
-
-        while (1) {
-            if (!cur)
-                return NULL;
-
-            next = &cur->next;
-            cur_key = cur->key;
-            cur_value = cur->value;
-
-            // Try to read the latest write
-            if (*prev != cur)
-                break;
-
-            if (!strcmp(cur_key, key))
-                return cur_value;
-
-            prev = next;
-            cur = *next;
-        }
-    }
-
-    return NULL;
-}
-
-int 
-hashtable_delete(char *key)
-{
-    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
-    node *cur, **prev;
-
-#ifdef HT_DEBUG
-    printf("HT DELETE key: %s bucket index: %d\n", key, index);
-#endif
-
-    while (1) {
-        prev = &lf_table.buckets[index];
-        cur = lf_table.buckets[index];
-
-        while (1) {
-            if (!cur)
-                return 0;
-
-            if (!strcmp(cur->key, key)) {
-                cur->tag = 1;
-
-                if (__sync_val_compare_and_swap(prev, cur, cur->next) == cur) {
-                    if (cur->tag == 1) {
-                        // do free
-                    } else {
-                        // TODO
-                        // wrong path
-                    }
-                } else
-                    break;
-            }
-
-            prev = &cur->next;
-            cur = cur->next;
-        }
-    }
-    return 0;
-}
-#endif
 
 int
 hashtable_dump()
