@@ -7,6 +7,10 @@
 (4) Multiple cores multiple keys;
 
 # Find
+(1) 1 core hit/miss keys;
+(2) 1 core uncertain keys;
+(3) Multiple cores hit/miss keys;
+(4) Multiple cores uncertain keys;
 
 # Delete
 (1) 1 core non-exit key(s);

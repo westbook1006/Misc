@@ -8,7 +8,7 @@
 
 int hashtable_init();
 int hashtable_insert(char *key, char *value);
-char* hashtable_search(char *key);
+char* hashtable_find(char *key);
 int hashtable_delete(char *key);
 int hashtable_dump();
 

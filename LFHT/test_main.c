@@ -17,8 +17,11 @@ enum {INSERT, SEARCH, DELETE} ht_command;
 
 #define KEY_LEN 9 
 #define VALUE_LEN 9
-#define THREAD_NUM 24
-#define TOTAL_REQUEST 20
+#define THREAD_NUM 1
+#define TOTAL_REQUEST 1000
+
+uint32_t total_access;
+uint32_t hit_access;
 
 static void *
 ht_test(void *arg)
@@ -31,10 +34,10 @@ ht_test(void *arg)
     memset(key, 0x0, KEY_LEN);
     memset(value, 0x64, VALUE_LEN);
     value[VALUE_LEN - 1] = 0x0;
-#if 1
+
     for (int i = 0; i < TOTAL_REQUEST; i++) {
-        //int cmd = random() % 3;
-        int cmd = 0;
+        int cmd = random() % 3;
+        //int cmd = 0;
         int user_id = random() % 90 + 10;
         sprintf(key, "USERHT%d", user_id);
         //sprintf(key, "USERHT11");
@@ -42,12 +45,12 @@ ht_test(void *arg)
         switch(cmd) {
             case INSERT: {hashtable_insert(key, value); break;}
             case SEARCH: {
-                             char *get_value = hashtable_search(key);
+                             char *get_value = hashtable_find(key);
+
+                             __sync_fetch_and_add(&total_access, 1);
 
                              if (get_value)
-                                 printf("HIT: Key %s Value %s\n", key, get_value);
-                             else
-                                 printf("MISS: Key %s\n", key);
+                                 __sync_fetch_and_add(&hit_access, 1);
 
                              break;
                          }
@@ -55,33 +58,7 @@ ht_test(void *arg)
             default: break;
         }
     }
-#endif
 
-#if 1
-    for (int i = 0; i < TOTAL_REQUEST; i++) {
-        //int cmd = random() % 3;
-        int cmd = 2;
-        int user_id = random() % 90 + 10;
-        sprintf(key, "USERHT%d", user_id);
-        //sprintf(key, "USERHT11");
-
-        switch(cmd) {
-            case INSERT: {hashtable_insert(key, value); break;}
-            case SEARCH: {
-                             char *get_value = hashtable_search(key);
-
-                             if (get_value)
-                                 printf("HIT: Key %s Value %s\n", key, get_value);
-                             else
-                                 printf("MISS: Key %s\n", key);
-
-                             break;
-                         }
-            case DELETE: {hashtable_delete(key); break;}
-            default: break;
-        }
-    }
-#endif
 }
 
 int 
@@ -130,6 +107,8 @@ main(int argc, char **argv)
     free(tinfo);
 
     hashtable_dump();
+    printf("Test case hit rate is %lf\n", 
+            (hit_access + 0.0) / (total_access + 0.0));
 
     return 0;
 }

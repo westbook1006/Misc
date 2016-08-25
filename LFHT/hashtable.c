@@ -13,7 +13,7 @@
 #include <string.h>
 #include "util.h"
 
-#define HT_DEBUG
+//#define HT_DEBUG
 
 LF_hashtable lf_table;
 
@@ -49,12 +49,6 @@ hashtable_init()
     }
 
     return 0;
-}
-
-int
-hashtable_search()
-{
-    printf("Hashtable search\n");
 }
 
 static node*
@@ -171,6 +165,24 @@ hashtable_delete(char *key)
     return 0;
 }
 
+char*
+hashtable_find(char *key)
+{
+    node *right_node, *left_node, *tail;
+    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
+    tail = lf_table.lf_buckets[index].tail;
+
+#ifdef HT_DEBUG
+    printf("HT FIND key: %s bucket index: %d\n", key, index);
+#endif
+
+    right_node = internal_hashtable_search(key, &left_node, index);
+    if ((right_node == tail) || (strcmp(right_node->key, key)))
+        return NULL;
+    else
+        return right_node->value;
+}
+
 #if 0
 
 char* 
@@ -266,7 +278,7 @@ hashtable_dump()
         }
         printf("Bucket %d has %d items\n", i, cnt);
 
-#if 1
+#if 0 
         begin = lf_table.lf_buckets[i].head->next;
         printf("Bucket %d BEGIN: ", i);
         while (begin != tail) {
