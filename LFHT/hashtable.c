@@ -29,6 +29,12 @@ get_unmarked_reference(node *ptr)
     return (node *)((uintptr_t)ptr & (~ (uintptr_t)1));
 }
 
+static inline node*
+get_marked_reference(node *ptr)
+{
+    return (node *)((uintptr_t)ptr | (uintptr_t)1);
+}
+
 int 
 hashtable_init()
 {
@@ -49,12 +55,6 @@ int
 hashtable_search()
 {
     printf("Hashtable search\n");
-}
-
-int
-hashtable_delete()
-{
-    printf("Hashtable delete\n");
 }
 
 static node*
@@ -94,6 +94,8 @@ internal_hashtable_search(char *key, node **left_node, int index)
         /* Step 3: Remove one or more marked nodes */
         if (CAS(&((*left_node)->next), left_node_next, right_node)) {
             // TODO: free left_node_next
+            INC(&lf_table.size, -1);
+
             if ((right_node != tail) && is_marked_reference(right_node->next))
                 continue;
             else
@@ -135,47 +137,41 @@ hashtable_insert(char *key, char *value)
     return 0;
 }
 
-#if 0
-int
-hashtable_insert(char *key, char *value)
+int 
+hashtable_delete(char *key)
 {
-    node *new_node, **prev, *cur;
+    node *right_node, *right_node_next, *left_node, *tail;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
+    tail = lf_table.lf_buckets[index].tail;
 
 #ifdef HT_DEBUG
-    printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
+    printf("HT DELETE key: %s bucket index: %d\n", key, index);
 #endif
 
-    new_node = (node *)malloc(sizeof(node));
-    strcpy(new_node->key, key);
-    strcpy(new_node->value, value);
-
-    while (1) {
-        cur = lf_table.buckets[index];
-        prev = &lf_table.buckets[index];
-
-        while ((cur != NULL) && (strcmp(cur->key, key) > 0)) {
-            prev = &cur->next;
-            cur = cur->next;
-        }
-
-        // Update when the key has been saved.
-        if ((cur != NULL) && (!strcmp(cur->key, key))) {
-            strcpy(cur->value, value);
-            free(new_node);
+    do {
+        right_node = internal_hashtable_search(key, &left_node, index);
+        if ((right_node == tail) || (strcmp(right_node->key, key)))
             return 0;
-        }
 
-        new_node->next = *prev;
-        if (__sync_val_compare_and_swap(prev, cur, new_node) == cur) {
-            break;
+        right_node_next = right_node->next;
+        if (!is_marked_reference(right_node_next)) {
+            if (CAS((&right_node->next), right_node_next, 
+                        get_marked_reference(right_node_next)))
+                break;
         }
+    } while (1);
+
+    if (!CAS(&(left_node->next), right_node, right_node_next)) {
+        right_node = internal_hashtable_search(key, &left_node, index);
+    } else {
+        //TODO: free right_node
+        INC(&lf_table.size, -1);
     }
-
-    __sync_fetch_and_add(&lf_table.size, 1);
 
     return 0;
 }
+
+#if 0
 
 char* 
 hashtable_search(char *key)

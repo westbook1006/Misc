@@ -9,3 +9,9 @@
 # Find
 
 # Delete
+(1) 1 core non-exit key(s);
+(2) Multiple cores non-exit key(s);
+(3) 1 core 1 key;
+(4) Multiple cores 1 key;
+(5) 1 core multiple keys;
+(6) Multiple cores multiple keys;
