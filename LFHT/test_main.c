@@ -18,7 +18,7 @@ enum {INSERT, SEARCH, DELETE} ht_command;
 #define KEY_LEN 9 
 #define VALUE_LEN 9
 #define THREAD_NUM 24
-#define TOTAL_REQUEST 20
+#define TOTAL_REQUEST 10
 
 static void *
 ht_test(void *arg)
@@ -37,6 +37,7 @@ ht_test(void *arg)
         int cmd = 0;
         int user_id = random() % 90 + 10;
         sprintf(key, "USERHT%d", user_id);
+        //sprintf(key, "USERHT11");
 
         switch(cmd) {
             case INSERT: {hashtable_insert(key, value); break;}

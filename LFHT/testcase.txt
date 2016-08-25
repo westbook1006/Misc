@@ -1,0 +1,11 @@
+## Test case consideration
+
+# Insert
+(1) 1 core 1 key;
+(2) 1 core multiple keys;
+(3) Multiple cores 1 key;
+(4) Multiple cores multiple keys;
+
+# Find
+
+# Delete

@@ -20,7 +20,7 @@ LF_hashtable lf_table;
 static inline int 
 is_marked_reference(node* ptr)
 {
-    return (uintptr_t)ptr | 1;
+    return (uintptr_t)ptr & 1;
 }
 
 static inline node* 
@@ -32,7 +32,16 @@ get_unmarked_reference(node *ptr)
 int 
 hashtable_init()
 {
-    printf("Hashtable init\n");
+#ifdef HT_DEBUG
+    printf("HT INIT\n");
+#endif
+
+    for (int i = 0; i < BUCKET_SIZE; i++) {
+        lf_table.lf_buckets[i].head = (node*)malloc(sizeof(node));
+        lf_table.lf_buckets[i].tail = (node*)malloc(sizeof(node));
+        lf_table.lf_buckets[i].head->next = lf_table.lf_buckets[i].tail;
+    }
+
     return 0;
 }
 
@@ -49,35 +58,34 @@ hashtable_delete()
 }
 
 static node*
-internal_hashtable_search(char *key, node **left_node, node *head)
+internal_hashtable_search(char *key, node **left_node, int index)
 {
-    node *left_node_next, *right_node;
+    node *left_node_next, *right_node, *head, *tail;
 
-    if (!head)
-        return NULL;
-    
-    *left_node = head;
-    left_node_next = head->next;
+    head = lf_table.lf_buckets[index].head;
+    tail = lf_table.lf_buckets[index].tail;
 
     while (1) {
         node *t = head;
         node *t_next = head->next;
 
-        /* Step 1: Find left_node and right node */
+        /* Step 1: Find left_node and right_node */
         do {
             if (!is_marked_reference(t_next)) {
                 *left_node = t;
                 left_node_next = t_next;
             }
             t = get_unmarked_reference(t_next);
-            if (!t) break;
-            t_next =t->next;
+            if (t == tail) 
+                break;
+            t_next = t->next;
         } while (is_marked_reference(t_next) || (strcmp(t->key, key) < 0));
+
         right_node = t;
     
         /* Step 2: Check nodes are adjacent */
         if (left_node_next == right_node) {
-            if ((!right_node) && is_marked_reference(right_node->next))
+            if ((right_node != tail) && is_marked_reference(right_node->next))
                 continue;
             else
                 return right_node;
@@ -85,7 +93,8 @@ internal_hashtable_search(char *key, node **left_node, node *head)
 
         /* Step 3: Remove one or more marked nodes */
         if (CAS(&((*left_node)->next), left_node_next, right_node)) {
-            if ((!right_node) && is_marked_reference(right_node->next))
+            // TODO: free left_node_next
+            if ((right_node != tail) && is_marked_reference(right_node->next))
                 continue;
             else
                 return right_node;
@@ -96,29 +105,34 @@ internal_hashtable_search(char *key, node **left_node, node *head)
 int 
 hashtable_insert(char *key, char *value)
 {
-    node *new_node, *right_node, *left_node, *head;
-    uint32_t index = jenkins_hash(key, KEY_LEN) & BUCKET_SIZE;
+    node *new_node, *right_node, *left_node;
+    uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
 #ifdef HT_DEBUG
     printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
 #endif
     new_node = (node *)malloc(sizeof(node));
     strcpy(new_node->key, key);
     strcpy(new_node->value, value);
-    head = lf_table.buckets[index];
 
     do {
-        right_node = internal_hashtable_search(key, &left_node, head);
-        if (!right_node)
+        right_node = internal_hashtable_search(key, &left_node, index);
+
+        if ((right_node != lf_table.lf_buckets[index].tail) && 
+                (!strcmp(right_node->key, key))) {
+            strcpy(right_node->value, value);
+            free(new_node);
             return 0;
-        if (!strcmp(right_node->key, key)) {
-            // do update;
         }
+
         new_node->next = right_node;
 
-        if (CAS(&(left_node->next), right_node, new_node))
+        if (CAS(&(left_node->next), right_node, new_node)) {
+            INC(&lf_table.size, 1);
             return 0;
+        }
     } while (1);
 
+    return 0;
 }
 
 #if 0
@@ -246,21 +260,22 @@ hashtable_dump()
 {
     printf("Hashtable size is %d\n", lf_table.size);
     for (int i = 0; i < BUCKET_SIZE; i++) {
-        node *head = lf_table.buckets[i];
+        node *begin = lf_table.lf_buckets[i].head->next;
+        node *tail = lf_table.lf_buckets[i].tail;
 
         uint32_t cnt = 0;
-        while (head != NULL) {
+        while (begin != tail) {
             cnt++;
-            head = head->next;
+            begin = begin->next;
         }
         printf("Bucket %d has %d items\n", i, cnt);
 
-#if 0
-        head = lf_table.buckets[i];
+#if 1
+        begin = lf_table.lf_buckets[i].head->next;
         printf("Bucket %d BEGIN: ", i);
-        while (head != NULL) {
-            printf("<key: %s, value: %s> --> ", head->key, head->value);
-            head = head->next;
+        while (begin != tail) {
+            printf("<key: %s, value: %s> --> ", begin->key, begin->value);
+            begin = begin->next;
         }
         printf("END\n");
 #endif

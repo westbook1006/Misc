@@ -19,8 +19,13 @@ typedef struct _node {
     struct _node *next;
 } __attribute__((packed)) node;
 
+typedef struct _bucket {
+    node *head;
+    node *tail;
+} __attribute__((packed)) bucket;
+
 typedef struct _table {
-    node* buckets[BUCKET_SIZE];
+    bucket lf_buckets[BUCKET_SIZE];
     uint32_t size;
 } __attribute__((packed)) LF_hashtable;
 
@@ -32,6 +37,8 @@ typedef struct _table {
 
 #define CAS(ADDR, OLDV, NEWV)  \
     __sync_bool_compare_and_swap((ADDR), (OLDV), (NEWV))
+
+#define INC(ADDR, VAL) __sync_fetch_and_add(ADDR, VAL)
 
 uint32_t jenkins_hash(const void *key, size_t length);
 
