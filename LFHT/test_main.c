@@ -16,7 +16,7 @@ struct thread_info {
 enum {INSERT, SEARCH, DELETE} ht_command;
 
 #define KEY_LEN 9 
-#define VALUE_LEN 17
+#define VALUE_LEN 9
 #define THREAD_NUM 24
 #define TOTAL_REQUEST 20
 
@@ -29,7 +29,8 @@ ht_test(void *arg)
     printf("Starting HashTable testing thread %d\n", tinfo->thread_num);
 
     memset(key, 0x0, KEY_LEN);
-    memset(value, 0x0, VALUE_LEN);
+    memset(value, 0x64, VALUE_LEN);
+    value[VALUE_LEN - 1] = 0x0;
 
     for (int i = 0; i < TOTAL_REQUEST; i++) {
         //int cmd = random() % 3;

@@ -1,6 +1,6 @@
 CC := gcc
 CFLAGS :=
-SRCS := hashtable.c hashtable.h jenkins_hash.c test_main.c
+SRCS := hashtable.c hashtable.h jenkins_hash.c test_main.c util.h
 LIBS := -lpthread
 TARGET := test_main
 
