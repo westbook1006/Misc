@@ -17,6 +17,13 @@
 
 LF_hashtable lf_table;
 
+// Memory management
+/*
+ * int ht_mm_init();
+ * int ht_mm_alloc();
+ * int ht_mm_free();
+ */
+
 static inline int 
 is_marked_reference(node* ptr)
 {
