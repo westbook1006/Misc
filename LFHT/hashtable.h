@@ -7,9 +7,9 @@
 #include <stdint.h>
 
 int hashtable_init();
-int hashtable_insert(char *key, char *value);
-char* hashtable_find(char *key);
-int hashtable_delete(char *key);
+int hashtable_insert(char *key, char *value); // Thread-safe
+char* hashtable_find(char *key); // Thread-safe
+int hashtable_delete(char *key); // Thread-safe
 int hashtable_dump();
 
 #endif

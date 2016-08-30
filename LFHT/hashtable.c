@@ -16,6 +16,7 @@
 //#define HT_DEBUG
 
 LF_hashtable lf_table;
+LF_memory lf_memory;
 
 // Memory management
 /*
@@ -49,10 +50,19 @@ hashtable_init()
     printf("HT INIT\n");
 #endif
 
+    // Init table
     for (int i = 0; i < BUCKET_SIZE; i++) {
         lf_table.lf_buckets[i].head = (node*)malloc(sizeof(node));
         lf_table.lf_buckets[i].tail = (node*)malloc(sizeof(node));
         lf_table.lf_buckets[i].head->next = lf_table.lf_buckets[i].tail;
+    }
+
+    // Init memory
+    for (int i = 0; i < HT_SIZE; i++) {
+        lf_memory.data_item[i].data = malloc(sizeof(char) * ITEM_SIZE);
+        lf_memory.data_item[i].node = NULL;
+        lf_memory.data_item[i].in_use = 0;
+        lf_memory.data_item[i].freq = 0;
     }
 
     return 0;
