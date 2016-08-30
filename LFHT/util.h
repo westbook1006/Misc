@@ -11,14 +11,16 @@
 #define KEY_LEN 11
 //#define VALUE_LEN 64
 #define VALUE_LEN 1024
-#define BUCKET_SIZE 64
+//#define BUCKET_SIZE 64
+#define BUCKET_SIZE 8
 #define ITEM_SIZE 4096
+//#define HT_SIZE 4096
 #define HT_SIZE 4096
 
 typedef struct _node {
     char key[KEY_LEN];
     char value[VALUE_LEN];
-    struct _item *data_item;
+    int data_item;
     struct _node *next;
 } __attribute__((packed)) node;
 
@@ -40,12 +42,12 @@ typedef struct _table {
 
 typedef struct _memory {
     item data_item[HT_SIZE];
-    uint32_t free_list[HT_SIZE];
-    uint32_t alloc_stack_pt;
+    int free_list[HT_SIZE];
+    int alloc_stack_pt;
     pthread_mutex_t alloc_lock;
 
-    void (*push)(uint32_t);
-    uint32_t (*pop)();
+    void (*push)(int);
+    int (*pop)();
 } __attribute__((packed)) LF_memory;
 
 #define CAS(ADDR, OLDV, NEWV)  \
