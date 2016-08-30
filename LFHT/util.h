@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <pthread.h>
 
 #define KEY_LEN 11
 //#define VALUE_LEN 64
@@ -29,8 +30,7 @@ typedef struct _bucket {
 typedef struct _item {
     void *data;
     struct _node *node;
-    uint8_t in_use;
-    uint16_t freq;
+    uint64_t freq;
 } __attribute__((packed)) item;
 
 typedef struct _table {
@@ -40,6 +40,12 @@ typedef struct _table {
 
 typedef struct _memory {
     item data_item[HT_SIZE];
+    uint32_t free_list[HT_SIZE];
+    uint32_t alloc_stack_pt;
+    pthread_mutex_t alloc_lock;
+
+    void (*push)(uint32_t);
+    uint32_t (*pop)();
 } __attribute__((packed)) LF_memory;
 
 #define CAS(ADDR, OLDV, NEWV)  \

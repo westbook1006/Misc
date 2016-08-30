@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "util.h"
 
 //#define HT_DEBUG
@@ -43,6 +44,46 @@ get_marked_reference(node *ptr)
     return (node *)((uintptr_t)ptr | (uintptr_t)1);
 }
 
+static int
+malloc_hash_memory()
+{
+    return lf_memory.pop();
+}
+
+static int
+free_hash_memory(int free_pt)
+{
+    lf_memory.push(free_pt);
+
+    return 0;
+}
+
+static void 
+data_item_push(uint32_t pt)
+{
+    pthread_mutex_lock(&lf_memory.alloc_lock);
+    lf_memory.free_list[lf_memory.alloc_stack_pt] = pt;
+    lf_memory.alloc_stack_pt++;
+    pthread_mutex_unlock(&lf_memory.alloc_lock);
+}
+
+static uint32_t
+data_item_pop()
+{
+    uint32_t pt;
+
+    pthread_mutex_lock(&lf_memory.alloc_lock);
+    pt = lf_memory.alloc_stack_pt - 1;
+    lf_memory.alloc_stack_pt--;
+
+    /*
+    if (!)
+        evict_hash_memory();*/
+    pthread_mutex_unlock(&lf_memory.alloc_lock);
+
+    return pt;
+}
+
 int 
 hashtable_init()
 {
@@ -58,11 +99,18 @@ hashtable_init()
     }
 
     // Init memory
-    for (int i = 0; i < HT_SIZE; i++) {
+    lf_memory.push = data_item_push;
+    lf_memory.pop = data_item_pop;
+    lf_memory.alloc_stack_pt = 0;
+    if (pthread_mutex_init(&lf_memory.alloc_lock, NULL)) {
+        printf("pthread_mutex_init failed\n");
+        return 0;
+    }
+    for (uint32_t i = 0; i < HT_SIZE; i++) {
         lf_memory.data_item[i].data = malloc(sizeof(char) * ITEM_SIZE);
         lf_memory.data_item[i].node = NULL;
-        lf_memory.data_item[i].in_use = 0;
         lf_memory.data_item[i].freq = 0;
+        lf_memory.push(i);
     }
 
     return 0;
