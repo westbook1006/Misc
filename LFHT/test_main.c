@@ -21,7 +21,7 @@ enum {INSERT, FIND, DELETE} ht_command;
 //#define VALUE_LEN 64
 #define VALUE_LEN 1024
 //#define TOTAL_REQUEST 1000000
-#define TOTAL_REQUEST 1000
+#define TOTAL_REQUEST 10000
 
 uint64_t total_find;
 uint64_t hit_find;
@@ -48,7 +48,6 @@ ht_test(void *arg)
 
     for (int i = 0; i < TOTAL_REQUEST; i++) {
         int cmd = random() % 3;
-        //int cmd = 0;
         int user_id = random() % 9000 + 1000;
         sprintf(key, "USERHT%d", user_id);
 

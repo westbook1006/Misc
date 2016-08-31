@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include "util.h"
 
-#define HT_DEBUG
+//#define HT_DEBUG
 
 LF_hashtable lf_table;
 LF_memory lf_memory;
@@ -78,10 +78,8 @@ evict_hash_memory()
         return;
 
     for (int i = 0; i < HT_SIZE; i++) {
-        if ((lf_memory.data_item[i].freq) &lf_memory.data_item[i].freq <= min) {
+        if ((lf_memory.data_item[i].freq) &lf_memory.data_item[i].freq <= min)
             hashtable_delete(lf_memory.data_item[i].node->key);
-            lf_memory.push(i);
-        }
     }
 }
 
@@ -109,12 +107,12 @@ data_item_pop()
         pthread_mutex_unlock(&lf_memory.alloc_lock);
         return -1;
     }
-    pt = lf_memory.alloc_stack_pt - 1;
+    pt = lf_memory.free_list[lf_memory.alloc_stack_pt - 1];
     lf_memory.alloc_stack_pt--;
     pthread_mutex_unlock(&lf_memory.alloc_lock);
 
-    if (!lf_memory.alloc_stack_pt)
-        evict_hash_memory();
+    //if (!lf_memory.alloc_stack_pt)
+    //    evict_hash_memory();
 
     return pt;
 }
@@ -151,7 +149,6 @@ hashtable_init()
     return 0;
 }
 
-int hashtable_dump();
 static node*
 internal_hashtable_search(char *key, node **left_node, int index)
 {
@@ -160,30 +157,23 @@ internal_hashtable_search(char *key, node **left_node, int index)
     head = lf_table.lf_buckets[index].head;
     tail = lf_table.lf_buckets[index].tail;
 
-    //hashtable_dump();
-
     while (1) {
         node *t = head;
         node *t_next = head->next;
 
         /* Step 1: Find left_node and right_node */
         do {
-            //printf("delete key %s t->key %s t %p head %p tail %p tail->next %p\n", key, t->key, t, head, tail, tail->next);
-            //data_item %d next %p\n", t->key, t->data_item, t->next);
-            //printf("ok\n");
+            //printf("internal key %s t->key %s t_next->key %s\n", key, t->key, t_next->key);
             if (!is_marked_reference(t_next)) {
                 *left_node = t;
                 left_node_next = t_next;
             }
-            //printf("ok1\n");
             t = get_unmarked_reference(t_next);
-            //printf("ok2 t %p t_next %p\n", t, t_next);
-            if (t == tail) 
+            if (t == tail)
                 break;
-            //printf("ok3 %s t %p head %p tail %p\n", t->key, t, head, tail);
+
             t_next = t->next;
         } while (is_marked_reference(t_next) || (strcmp(t->key, key) < 0));
-        //printf("test3\n");
 
         right_node = t;
     
@@ -194,7 +184,6 @@ internal_hashtable_search(char *key, node **left_node, int index)
             else
                 return right_node;
         }
-        //printf("test4\n");
 
         /* Step 3: Remove one or more marked nodes */
         if (CAS(&((*left_node)->next), left_node_next, right_node)) {
@@ -206,7 +195,6 @@ internal_hashtable_search(char *key, node **left_node, int index)
             else
                 return right_node;
         }
-        //printf("test5\n");
     }
 }
 
@@ -217,11 +205,24 @@ hashtable_insert(char *key, char *value)
     node *new_node, *right_node, *left_node;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
 #ifdef HT_DEBUG
-    //printf("HT INSERT key: %s value: %s bucket index: %d\n", key, value, index);
-    //printf("HT INSERT key: %s bucket index: %d\n", key, index);
+    printf("HT INSERT key: %s bucket index: %d\n", key, index);
+    //hashtable_dump();
 #endif
-    while ((alloc_pt = malloc_hash_memory()) == -1)
-        ;
+    alloc_pt = malloc_hash_memory();
+    if (alloc_pt == -1)
+        return 0;
+    //printf("begin\n");
+    //while ((alloc_pt = malloc_hash_memory()) == -1) {
+    //    printf("test\n");
+    //}
+
+    /*printf("free list:\n");
+    for (int i = 0; i < lf_memory.alloc_stack_pt; i++)
+        printf("%d ", lf_memory.free_list[i]);;
+    printf("\n");
+    printf("stack pt is %d\n", lf_memory.alloc_stack_pt);
+    printf("alloc_pt is %d\n", alloc_pt);*/
+
     new_node = (node *)lf_memory.data_item[alloc_pt].data;
 
     strcpy(new_node->key, key);
@@ -260,6 +261,7 @@ hashtable_delete(char *key)
 
 #ifdef HT_DEBUG
     printf("HT DELETE key: %s bucket index: %d\n", key, index);
+    //hashtable_dump();
 #endif
 
     do {
@@ -268,7 +270,6 @@ hashtable_delete(char *key)
             return 0;
 
         right_node_next = right_node->next;
-    printf("right_node->next %p right_node_next %p\n", right_node->next, right_node_next);
         if (!is_marked_reference(right_node_next)) {
             if (CAS((&right_node->next), right_node_next, 
                         get_marked_reference(right_node_next))) {
@@ -276,8 +277,6 @@ hashtable_delete(char *key)
             }
         }
     } while (1);
-
-    //printf("right_node->next %p right_node_next %p\n", right_node->next, right_node_next);
 
     if (!CAS(&(left_node->next), right_node, right_node_next)) {
         right_node = internal_hashtable_search(key, &left_node, index);
@@ -297,7 +296,7 @@ hashtable_find(char *key)
     tail = lf_table.lf_buckets[index].tail;
 
 #ifdef HT_DEBUG
-    //printf("HT FIND key: %s bucket index: %d\n", key, index);
+    printf("HT FIND key: %s bucket index: %d\n", key, index);
 #endif
 
     right_node = internal_hashtable_search(key, &left_node, index);
@@ -324,12 +323,12 @@ hashtable_dump()
         }
         printf("Bucket %d has %d items\n", i, cnt);
 
-#if 1 
+#if 0 
         begin = lf_table.lf_buckets[i].head->next;
         printf("Bucket %d BEGIN: ", i);
         while (begin != tail) {
             //printf("<key: %s, value: %s> --> ", begin->key, begin->value);
-            printf("<key: %s> --> ", begin->key);
+            printf("<key: %s Item %d> --> ", begin->key, begin->data_item);
             begin = begin->next;
         }
         printf("END\n");

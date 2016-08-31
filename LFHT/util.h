@@ -11,10 +11,8 @@
 #define KEY_LEN 11
 //#define VALUE_LEN 64
 #define VALUE_LEN 1024
-//#define BUCKET_SIZE 64
-#define BUCKET_SIZE 8
+#define BUCKET_SIZE 64
 #define ITEM_SIZE 4096
-//#define HT_SIZE 4096
 #define HT_SIZE 4096
 
 typedef struct _node {
@@ -43,7 +41,7 @@ typedef struct _table {
 typedef struct _memory {
     item data_item[HT_SIZE];
     int free_list[HT_SIZE];
-    int alloc_stack_pt;
+    volatile int alloc_stack_pt;
     pthread_mutex_t alloc_lock;
 
     void (*push)(int);
