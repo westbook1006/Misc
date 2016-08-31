@@ -18,10 +18,9 @@ struct thread_info {
 enum {INSERT, FIND, DELETE} ht_command;
 
 #define KEY_LEN 11 
-//#define VALUE_LEN 64
 #define VALUE_LEN 1024
-//#define TOTAL_REQUEST 1000000
-#define TOTAL_REQUEST 10000
+#define TOTAL_REQUEST 1000000
+//#define TOTAL_REQUEST 10000
 
 uint64_t total_find;
 uint64_t hit_find;

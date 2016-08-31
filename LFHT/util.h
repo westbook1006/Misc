@@ -1,5 +1,6 @@
 /*
- * Utility functions for the hashtable
+ * Utility definitions and functions for the hashtable and its
+ * memory management.
  */
 #ifndef _UTIL_H_
 #define _UTIL_H_
@@ -9,7 +10,6 @@
 #include <pthread.h>
 
 #define KEY_LEN 11
-//#define VALUE_LEN 64
 #define VALUE_LEN 1024
 #define BUCKET_SIZE 64
 #define ITEM_SIZE 4096
@@ -20,12 +20,12 @@ typedef struct _node {
     char value[VALUE_LEN];
     int data_item;
     struct _node *next;
-} __attribute__((packed)) node;
+} __attribute__((aligned(8))) node;
 
 typedef struct _bucket {
     node *head;
     node *tail;
-} __attribute__((packed)) bucket;
+} __attribute__((aligned(8))) bucket;
 
 typedef struct _item {
     void *data;

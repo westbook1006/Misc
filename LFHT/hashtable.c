@@ -1,5 +1,10 @@
 /*
- * A lock-free hashtable implementation
+ * Description: A lock-free hashtable implementation.
+ *
+ * Note:
+ * (1) The memory management is a locked version based on the free-list concept.
+ * (2) This implementation has been tested on a Dell server, enclosing two Intel
+ * Xeon X5650 processors (each has 6 cores) and 24G memory.
  *
  * Reference:
  *  [1] A Pragmatic Implementation of Non-Blocking Linked-Lists,
@@ -111,8 +116,8 @@ data_item_pop()
     lf_memory.alloc_stack_pt--;
     pthread_mutex_unlock(&lf_memory.alloc_lock);
 
-    //if (!lf_memory.alloc_stack_pt)
-    //    evict_hash_memory();
+    if (!lf_memory.alloc_stack_pt)
+        evict_hash_memory();
 
     return pt;
 }
@@ -163,7 +168,9 @@ internal_hashtable_search(char *key, node **left_node, int index)
 
         /* Step 1: Find left_node and right_node */
         do {
-            //printf("internal key %s t->key %s t_next->key %s\n", key, t->key, t_next->key);
+            //An internal debugging test
+            //printf("internal key %s t->key %s t_next->key %s\n", 
+            //key, t->key, t_next->key);
             if (!is_marked_reference(t_next)) {
                 *left_node = t;
                 left_node_next = t_next;
@@ -195,6 +202,7 @@ internal_hashtable_search(char *key, node **left_node, int index)
             else
                 return right_node;
         }
+
     }
 }
 
@@ -203,25 +211,14 @@ hashtable_insert(char *key, char *value)
 {
     int alloc_pt = -1;
     node *new_node, *right_node, *left_node;
+    if (!key) return 0;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
 #ifdef HT_DEBUG
     printf("HT INSERT key: %s bucket index: %d\n", key, index);
-    //hashtable_dump();
 #endif
-    alloc_pt = malloc_hash_memory();
-    if (alloc_pt == -1)
-        return 0;
-    //printf("begin\n");
-    //while ((alloc_pt = malloc_hash_memory()) == -1) {
-    //    printf("test\n");
-    //}
-
-    /*printf("free list:\n");
-    for (int i = 0; i < lf_memory.alloc_stack_pt; i++)
-        printf("%d ", lf_memory.free_list[i]);;
-    printf("\n");
-    printf("stack pt is %d\n", lf_memory.alloc_stack_pt);
-    printf("alloc_pt is %d\n", alloc_pt);*/
+    while ((alloc_pt = malloc_hash_memory()) == -1) {
+        ;
+    }
 
     new_node = (node *)lf_memory.data_item[alloc_pt].data;
 
@@ -256,12 +253,12 @@ int
 hashtable_delete(char *key)
 {
     node *right_node, *right_node_next, *left_node, *tail;
+    if (!key) return 0;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
     tail = lf_table.lf_buckets[index].tail;
 
 #ifdef HT_DEBUG
     printf("HT DELETE key: %s bucket index: %d\n", key, index);
-    //hashtable_dump();
 #endif
 
     do {
@@ -292,6 +289,7 @@ char*
 hashtable_find(char *key)
 {
     node *right_node, *left_node, *tail;
+    if (!key) return 0;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
     tail = lf_table.lf_buckets[index].tail;
 
