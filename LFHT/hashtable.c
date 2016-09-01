@@ -92,6 +92,7 @@ static void
 data_item_push(int pt)
 {
     pthread_mutex_lock(&lf_memory.alloc_lock);
+    //TODO: add a read-write lock
     lf_memory.data_item[pt].node = NULL;
     lf_memory.data_item[pt].freq = 0;
     lf_memory.free_list[lf_memory.alloc_stack_pt] = pt;
@@ -145,6 +146,7 @@ hashtable_init()
         return 0;
     }
     for (int i = 0; i < HT_SIZE; i++) {
+        //TODO: add a read-write lock and init
         lf_memory.data_item[i].data = malloc(sizeof(char) * ITEM_SIZE);
         lf_memory.data_item[i].node = NULL;
         lf_memory.data_item[i].freq = 0;
@@ -179,6 +181,7 @@ internal_hashtable_search(char *key, node **left_node, int index)
             if (t == tail)
                 break;
 
+            // TODO: add a read-write lock and null check
             t_next = t->next;
         } while (is_marked_reference(t_next) || (strcmp(t->key, key) < 0));
 
@@ -222,6 +225,7 @@ hashtable_insert(char *key, char *value)
 
     new_node = (node *)lf_memory.data_item[alloc_pt].data;
 
+    //TODO: add a read-write lock and null checking
     strcpy(new_node->key, key);
     strcpy(new_node->value, value);
     new_node->data_item = alloc_pt;
@@ -231,6 +235,7 @@ hashtable_insert(char *key, char *value)
 
         if ((right_node != lf_table.lf_buckets[index].tail) && 
                 (!strcmp(right_node->key, key))) {
+            //TODO: add a read-write lock and null checking
             strcpy(right_node->value, value);
             free_hash_memory(alloc_pt);
             return 0;
@@ -289,7 +294,7 @@ char*
 hashtable_find(char *key)
 {
     node *right_node, *left_node, *tail;
-    if (!key) return 0;
+    if (!key) return NULL;
     uint32_t index = jenkins_hash(key, KEY_LEN) % BUCKET_SIZE;
     tail = lf_table.lf_buckets[index].tail;
 
@@ -301,6 +306,7 @@ hashtable_find(char *key)
     if ((right_node == tail) || (strcmp(right_node->key, key)))
         return NULL;
     else {
+        //TODO: Add a read-write lock and null checking
         lf_memory.data_item[right_node->data_item].freq++;
         return right_node->value;
     }
