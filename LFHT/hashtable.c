@@ -321,8 +321,27 @@ hashtable_delete(char *key)
 
     do {
         right_node = internal_hashtable_search(key, &left_node, index);
-        if ((right_node == tail) || (strcmp(right_node->key, key)))
+
+        if (pthread_rwlock_rdlock(
+                    &lf_memory.data_item[right_node->data_item].rw_lock)) {
+            printf("pthread_rwlock_rdlock failed\n");
             return 0;
+        }
+        int cmp_ret = strcmp(right_node->key, key);
+
+        if ((right_node == tail) || (cmp_ret)) {
+            if (pthread_rwlock_unlock(
+                        &lf_memory.data_item[right_node->data_item].rw_lock))
+                printf("pthread_rwlock_unlock failed\n");
+
+            return 0;
+        }
+
+        if (pthread_rwlock_unlock(
+                    &lf_memory.data_item[right_node->data_item].rw_lock)) {
+            printf("pthread_rwlock_unlock failed\n");
+            return 0;
+        }
 
         right_node_next = right_node->next;
         if (!is_marked_reference(right_node_next)) {
