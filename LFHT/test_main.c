@@ -67,7 +67,11 @@ ht_test(void *arg)
                          }
             case FIND: {
                              gettimeofday(&start, NULL);
-                             node *get_value = hashtable_find(key);
+                             node *get_node = hashtable_find(key);
+                             if (get_node) {
+                                 hashtable_find_end(get_node);
+                                 __sync_fetch_and_add(&hit_find, 1);
+                             }
                              gettimeofday(&end, NULL);
 
                              elapsed_time = end.tv_sec * 1000000 + end.tv_usec -
@@ -76,9 +80,6 @@ ht_test(void *arg)
                                      elapsed_time); 
 
                              __sync_fetch_and_add(&total_find, 1);
-
-                             if (get_value)
-                                 __sync_fetch_and_add(&hit_find, 1);
 
                              break;
                          }

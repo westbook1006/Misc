@@ -2,7 +2,7 @@
  * Description: A lock-free hashtable implementation.
  *
  * Note:
- * (1) The memory management is a locked version based on the free-list concept.
+ * (1) The memory management is a locked one based on the free-list concept.
  * (2) This implementation has been tested on a Dell server, enclosing two Intel
  * Xeon X5650 processors (each has 6 cores) and 24G memory.
  *
@@ -82,7 +82,7 @@ evict_hash_memory()
     if ((!min) || (min == UINT64_MAX))
         return;
 
-    // Try to evict more for future allocaiton
+    // Try to evict more for future allocaitons
     for (int i = 0; i < HT_SIZE; i++) {
         if ((lf_memory.data_item[i].freq) && 
                 (lf_memory.data_item[i].freq <= min))
@@ -97,6 +97,7 @@ data_item_push(int pt)
         printf("pthread_rwlock_wrlock failed\n");
         return;
     }
+
     lf_memory.data_item[pt].node = NULL;
     lf_memory.data_item[pt].freq = 0;
     if (pthread_rwlock_unlock(&lf_memory.data_item[pt].rw_lock)) {
@@ -196,18 +197,22 @@ internal_hashtable_search(char *key, node **left_node, int index)
             if (t == tail)
                 break;
 
-            t_next = t->next;
-
-            if (pthread_rwlock_rdlock(
-                        &lf_memory.data_item[t->data_item].rw_lock)) {
-                printf("pthread_rwlock_rdlock failed\n");
-                return 0;
-            }
-            cmp_ret = strcmp(t->key, key);
-            if (pthread_rwlock_unlock(
-                        &lf_memory.data_item[t->data_item].rw_lock)) {
-                printf("pthread_rwlock_unlock failed\n");
-                return 0;
+            if (t) {
+                if (pthread_rwlock_rdlock(
+                            &lf_memory.data_item[t->data_item].rw_lock)) {
+                    printf("pthread_rwlock_rdlock failed\n");
+                    return NULL;
+                }
+                t_next = t->next;
+                cmp_ret = strcmp(t->key, key);
+                if (pthread_rwlock_unlock(
+                            &lf_memory.data_item[t->data_item].rw_lock)) {
+                    printf("pthread_rwlock_unlock failed\n");
+                    return NULL;
+                }
+            } else {
+                t = head;
+                t_next = head->next;
             }
         } while (is_marked_reference(t_next) || (cmp_ret < 0));
 
@@ -275,13 +280,12 @@ hashtable_insert(char *key, char *value)
             free_hash_memory(alloc_pt);
             return 0;
         }
+        new_node->next = right_node;
         if (pthread_rwlock_unlock(
                     &lf_memory.data_item[right_node->data_item].rw_lock)) {
             printf("pthread_rwlock_unlock failed\n");
             return 0;
         }
-
-        new_node->next = right_node;
 
         if (CAS(&(left_node->next), right_node, new_node)) {
             // Visible point. Need to acquire a lock
