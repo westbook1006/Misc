@@ -31,6 +31,7 @@ typedef struct _item {
     void *data;
     struct _node *node;
     uint64_t freq;
+    pthread_rwlock_t rw_lock;
 } __attribute__((packed)) item;
 
 typedef struct _table {

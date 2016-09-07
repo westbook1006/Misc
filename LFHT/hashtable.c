@@ -82,8 +82,10 @@ evict_hash_memory()
     if ((!min) || (min == UINT64_MAX))
         return;
 
+    // Try to evict more for future allocaiton
     for (int i = 0; i < HT_SIZE; i++) {
-        if ((lf_memory.data_item[i].freq) &lf_memory.data_item[i].freq <= min)
+        if ((lf_memory.data_item[i].freq) && 
+                (lf_memory.data_item[i].freq <= min))
             hashtable_delete(lf_memory.data_item[i].node->key);
     }
 }
@@ -91,10 +93,18 @@ evict_hash_memory()
 static void 
 data_item_push(int pt)
 {
-    pthread_mutex_lock(&lf_memory.alloc_lock);
-    //TODO: add a read-write lock
+    if (pthread_rwlock_wrlock(&lf_memory.data_item[pt].rw_lock)) {
+        printf("pthread_rwlock_wrlock failed\n");
+        return;
+    }
     lf_memory.data_item[pt].node = NULL;
     lf_memory.data_item[pt].freq = 0;
+    if (pthread_rwlock_unlock(&lf_memory.data_item[pt].rw_lock)) {
+        printf("pthread_rwlock_unlock failed\n");
+        return;
+    }
+
+    pthread_mutex_lock(&lf_memory.alloc_lock);
     lf_memory.free_list[lf_memory.alloc_stack_pt] = pt;
     lf_memory.alloc_stack_pt++;
     pthread_mutex_unlock(&lf_memory.alloc_lock);
@@ -117,7 +127,8 @@ data_item_pop()
     lf_memory.alloc_stack_pt--;
     pthread_mutex_unlock(&lf_memory.alloc_lock);
 
-    if (!lf_memory.alloc_stack_pt)
+    // Make sure evict_hash_memory can evict something
+    while (!lf_memory.alloc_stack_pt)
         evict_hash_memory();
 
     return pt;
@@ -146,10 +157,13 @@ hashtable_init()
         return 0;
     }
     for (int i = 0; i < HT_SIZE; i++) {
-        //TODO: add a read-write lock and init
         lf_memory.data_item[i].data = malloc(sizeof(char) * ITEM_SIZE);
         lf_memory.data_item[i].node = NULL;
         lf_memory.data_item[i].freq = 0;
+        if (pthread_rwlock_init(&lf_memory.data_item[i].rw_lock,NULL)) {
+            printf("pthread_rwlock_init failed\n");
+            return 0;
+        }
         lf_memory.push(i);
     }
 
@@ -167,6 +181,7 @@ internal_hashtable_search(char *key, node **left_node, int index)
     while (1) {
         node *t = head;
         node *t_next = head->next;
+        int cmp_ret = 0;
 
         /* Step 1: Find left_node and right_node */
         do {
@@ -181,9 +196,20 @@ internal_hashtable_search(char *key, node **left_node, int index)
             if (t == tail)
                 break;
 
-            // TODO: add a read-write lock and null check
             t_next = t->next;
-        } while (is_marked_reference(t_next) || (strcmp(t->key, key) < 0));
+
+            if (pthread_rwlock_rdlock(
+                        &lf_memory.data_item[t->data_item].rw_lock)) {
+                printf("pthread_rwlock_rdlock failed\n");
+                return 0;
+            }
+            cmp_ret = strcmp(t->key, key);
+            if (pthread_rwlock_unlock(
+                        &lf_memory.data_item[t->data_item].rw_lock)) {
+                printf("pthread_rwlock_unlock failed\n");
+                return 0;
+            }
+        } while (is_marked_reference(t_next) || (cmp_ret < 0));
 
         right_node = t;
     
@@ -209,7 +235,7 @@ internal_hashtable_search(char *key, node **left_node, int index)
     }
 }
 
-int 
+int
 hashtable_insert(char *key, char *value)
 {
     int alloc_pt = -1;
@@ -225,7 +251,7 @@ hashtable_insert(char *key, char *value)
 
     new_node = (node *)lf_memory.data_item[alloc_pt].data;
 
-    //TODO: add a read-write lock and null checking
+    // No need to hold the rw lock since it's not visible
     strcpy(new_node->key, key);
     strcpy(new_node->value, value);
     new_node->data_item = alloc_pt;
@@ -233,19 +259,42 @@ hashtable_insert(char *key, char *value)
     do {
         right_node = internal_hashtable_search(key, &left_node, index);
 
+        if (pthread_rwlock_wrlock(
+                    &lf_memory.data_item[right_node->data_item].rw_lock)) {
+            printf("pthread_rwlock_wrlock failed\n");
+            return 0;
+        }
         if ((right_node != lf_table.lf_buckets[index].tail) && 
                 (!strcmp(right_node->key, key))) {
-            //TODO: add a read-write lock and null checking
             strcpy(right_node->value, value);
+            if (pthread_rwlock_unlock(
+                        &lf_memory.data_item[right_node->data_item].rw_lock)) {
+                printf("pthread_rwlock_unlock failed\n");
+                return 0;
+            }
             free_hash_memory(alloc_pt);
+            return 0;
+        }
+        if (pthread_rwlock_unlock(
+                    &lf_memory.data_item[right_node->data_item].rw_lock)) {
+            printf("pthread_rwlock_unlock failed\n");
             return 0;
         }
 
         new_node->next = right_node;
 
         if (CAS(&(left_node->next), right_node, new_node)) {
+            // Visible point. Need to acquire a lock
+            if (pthread_rwlock_wrlock(&lf_memory.data_item[alloc_pt].rw_lock)) {
+                printf("pthread_rwlock_wrlock failed\n");
+                return 0;
+            }
             lf_memory.data_item[alloc_pt].node = new_node;
-            lf_memory.data_item[alloc_pt].freq++;
+            if (pthread_rwlock_unlock(&lf_memory.data_item[alloc_pt].rw_lock)) {
+                printf("pthread_rwlock_unlock failed\n");
+                return 0;
+            }
+            INC(&lf_memory.data_item[alloc_pt].freq, 1);
             INC(&lf_table.size, 1);
             return 0;
         }
@@ -290,7 +339,7 @@ hashtable_delete(char *key)
     return 0;
 }
 
-char*
+node*
 hashtable_find(char *key)
 {
     node *right_node, *left_node, *tail;
@@ -303,13 +352,34 @@ hashtable_find(char *key)
 #endif
 
     right_node = internal_hashtable_search(key, &left_node, index);
-    if ((right_node == tail) || (strcmp(right_node->key, key)))
+
+    if (pthread_rwlock_rdlock(
+                &lf_memory.data_item[right_node->data_item].rw_lock)) {
+        printf("pthread_rwlock_rdlock failed\n");
         return NULL;
-    else {
-        //TODO: Add a read-write lock and null checking
-        lf_memory.data_item[right_node->data_item].freq++;
-        return right_node->value;
     }
+    int cmp_ret = strcmp(right_node->key, key);
+
+    if ((right_node == tail) || (cmp_ret)) {
+        if (pthread_rwlock_unlock(
+                    &lf_memory.data_item[right_node->data_item].rw_lock))
+            printf("pthread_rwlock_unlock failed\n");
+
+        return NULL;
+    }
+    else {
+        INC(&lf_memory.data_item[right_node->data_item].freq, 1);
+        return right_node;
+    }
+}
+
+int
+hashtable_find_end(node *node)
+{
+    if (pthread_rwlock_unlock(&lf_memory.data_item[node->data_item].rw_lock))
+        printf("pthread_rwlock_unlock failed\n");
+
+    return 0;
 }
 
 int

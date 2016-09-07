@@ -67,7 +67,7 @@ ht_test(void *arg)
                          }
             case FIND: {
                              gettimeofday(&start, NULL);
-                             char *get_value = hashtable_find(key);
+                             node *get_value = hashtable_find(key);
                              gettimeofday(&end, NULL);
 
                              elapsed_time = end.tv_sec * 1000000 + end.tv_usec -
