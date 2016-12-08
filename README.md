@@ -6,3 +6,4 @@ Misc: Other stuffs I have done
 * minHash --> A random approxmiation algorithm
 * LFHT --> A lock-free hashtable implementation
 * RDTSC --> RDTSC instruction test
+* Zipf --> A zipf distribution generator
