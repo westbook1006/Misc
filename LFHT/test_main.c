@@ -156,15 +156,16 @@ main(int argc, char **argv)
     hashtable_dump();
 
     printf("Hashtable execution statistics:\n");
-    if (total_insert)
+    if (total_insert) {
         printf("Hashtable insert time: %lf\n", 
-                (total_insert_time + 0.0) / (total_insert + 0.0));
+                (total_insert_time + 0.0) / (1000000 * total_insert + 0.0));
+    }
     if (total_delete)
         printf("Hashtable delete time: %lf\n",
-                (total_delete_time + 0.0) / (total_delete + 0.0));
+                (total_delete_time + 0.0) / (1000000 * total_delete + 0.0));
     if (total_find)
         printf("Hashtable find time: %lf\n",
-                (total_find_time + 0.0) / (total_find + 0.0));
+                (total_find_time + 0.0) / (1000000 * total_find + 0.0));
     if (total_find)
         printf("Test case hit rate is %lf\n", 
                 (hit_find + 0.0) / (total_find + 0.0));
