@@ -1,4 +1,9 @@
 *.swp
 *.o
-LFHT/test_main
-Zipf/zipf
+
+# Binaries
+test_main
+zipf
+amted_server
+shell
+rdtsc
