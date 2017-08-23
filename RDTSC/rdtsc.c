@@ -2,6 +2,8 @@
  * RDTSC instruciton test. Two aspects:
  *   - Basic functionalities
  *   - Invariant TSC (frequency has nearly no impact)
+ *
+ * Note that: this only works in Intel x86.
  */
 
 #define _GNU_SOURCE

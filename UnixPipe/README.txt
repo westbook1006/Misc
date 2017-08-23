@@ -1,2 +1,4 @@
-INSTALL:
-sudo apt-get install libreadline-dev
+An Unix PIPE
+
+Package dependencies:
+   * libreadline-dev

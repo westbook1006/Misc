@@ -2,7 +2,7 @@ CC := gcc
 CFLAGS :=
 SRCS := pipe_shell.c pipe_shell.h
 LIBS := -lreadline
-TARGET := 550shell
+TARGET := shell
 
 .DEFAULT_GOAL := $(TARGET)
 

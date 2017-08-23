@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# NOTE that my platform is Intel Xeon CPU E5-2680 v3.
+# NOTE that the testbed is Intel Xeon CPU E5-2680 v3.
 # Its frequency ranges from 1.20GHz to 2.50GHz (without
 # enabling Turboboost.
 #
