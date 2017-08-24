@@ -4,3 +4,4 @@ Other stuff I have tried:
 * LFHT --> A lock-free hashtable implementation
 * RDTSC --> RDTSC instruction test
 * Zipf --> A zipf distribution generator
+* ConcurrentHT --> A concurrent hashtable implementation
