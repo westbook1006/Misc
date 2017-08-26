@@ -3,7 +3,7 @@ CFLAGS := -g -Wall
 LIBS := -lpthread
 
 SRCS := test_main.c \
-		concurrent_ht.c
+		concurrent_ht.c city.c
 
 MAIN := test_main
 OBJS = $(SRCS:.c=.o)
@@ -19,4 +19,4 @@ $(MAIN): $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@ $(LIBS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(MAIN) $(OBJS)
