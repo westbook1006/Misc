@@ -3,7 +3,8 @@
  *
  * Features:
  *   (1) concurrent cuckoo hashing;
- *   (2) single-writer/multi-reader;
+ *   (2) optimistic locking;
+ *   (3) single-writer/multi-reader;
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +18,7 @@
 #define HASHPOWER_DEFAULT 16                    /* default hash table size */
 #define BUCKET_SIZE       4                     /* 4-way set-associate     */
 #define KEY_SIZE          32                    /* Maximum size of the key */
-#define VAL_SIZE        1024                    /* Maximum size of the value */
+#define VAL_SIZE          1024                  /* Maximum size of the value */
 #define KEY_VER_SIZE      ((uint32_t) 1 << 13)  /* key version size */
 #define KEY_VER_MASK      (KEY_VER_SIZE - 1)    /* key version mask */
 #define HASH_SIZE(n)      ((uint32_t) 1 << n)   /* hash size */
@@ -45,7 +46,7 @@ typedef struct _kv_t {
 
 /* bucket type in the hashtable */
 typedef struct _bucket_t {
-    uint32_t tags[BUCKET_SIZE];
+    int32_t tags[BUCKET_SIZE];
     ht_kv_t* kv_data[BUCKET_SIZE];
 } CACHE_ALIGN ht_bucket_t;
 
@@ -227,7 +228,7 @@ slot_is_empty(concurrent_ht_t *ht,
               size_t index,
               size_t sub_index)
 {
-    return ((TABLE_TAG(ht, index, sub_index) == 0) ? true: false);
+    return ((TABLE_KEY(ht, index, sub_index).key_len == 0) ? true: false);
 }
 
 
@@ -593,22 +594,19 @@ concur_hashtable_insert(concurrent_ht_t *ht,
     uint32_t key_lock = keylock_index(hv);
 
     ht_status ret;
-    char *old_val;
+    char old_val[VAL_SIZE];
 
-    old_val = (char *)malloc(sizeof(char) * VAL_SIZE);
     mylock_lock(ht);
 
     ret = cuckoo_find(ht, key, old_val, hv, i1, i2, key_lock);
     if (ret == HT_FOUND) {
         mylock_unlock(ht);
-        free(old_val);
         return  HT_INSERT_FAILURE_KEY_DUPLICATED;
     }
 
     ret = cuckoo_insert(ht, key, val, hv, i1, i2, key_lock);
 
     mylock_unlock(ht);
-    free(old_val);
 
     return ret;
 }

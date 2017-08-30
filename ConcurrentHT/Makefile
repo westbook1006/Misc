@@ -1,9 +1,10 @@
 CC := gcc
 CFLAGS := -g -Wall
-LIBS := -lpthread
+LIBS := -lpthread -lm
 
 SRCS := test_main.c \
-		concurrent_ht.c city.c
+		concurrent_ht.c city.c workload_gen.c \
+		workload_gen_op_wrapper.c zipf.c
 
 MAIN := test_main
 OBJS = $(SRCS:.c=.o)
