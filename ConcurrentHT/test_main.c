@@ -184,13 +184,13 @@ small_scale_insert_del_get()
 static void
 large_scale_insert_only()
 {
-    wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, SET_100);
+    //wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, SET_100);
     //wl_gen *gen = init_wl_gen(64, 1, RANDOM, SET_100);
     //wl_gen *gen = init_wl_gen(64, 1, ZIP, SET_100);
 
     //wl_gen *gen = init_wl_gen(1024, 1, SEQUENTIAL, SET_100);
     //wl_gen *gen = init_wl_gen(1024, 1, RANDOM, SET_100);
-    //wl_gen *gen = init_wl_gen(1024, 1, ZIP, SET_100);
+    wl_gen *gen = init_wl_gen(1024, 1, ZIP, SET_100);
 
     run_wl_gen(gen);
     report_wl_gen(gen);
@@ -200,7 +200,14 @@ large_scale_insert_only()
 static void
 large_scale_get_only()
 {
-    wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, GET_100);
+    //wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, GET_100);
+    //wl_gen *gen = init_wl_gen(64, 1, RANDOM, GET_100);
+    //wl_gen *gen = init_wl_gen(64, 1, ZIP, GET_100);
+
+    //wl_gen *gen = init_wl_gen(1024, 1, SEQUENTIAL, GET_100);
+    //wl_gen *gen = init_wl_gen(1024, 1, RANDOM, GET_100);
+    wl_gen *gen = init_wl_gen(1024, 1, ZIP, GET_100);
+
     run_wl_gen(gen);
     report_wl_gen(gen);
     free_wl_gen(gen);
@@ -209,7 +216,14 @@ large_scale_get_only()
 static void
 large_scale_del_only()
 {
-    wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, DEL_100);
+    //wl_gen *gen = init_wl_gen(64, 1, SEQUENTIAL, DEL_100);
+    //wl_gen *gen = init_wl_gen(64, 1, RANDOM, DEL_100);
+    //wl_gen *gen = init_wl_gen(64, 1, ZIP, DEL_100);
+
+    //wl_gen *gen = init_wl_gen(1024, 1, SEQUENTIAL, DEL_100);
+    //wl_gen *gen = init_wl_gen(1024, 1, RANDOM, DEL_100);
+    wl_gen *gen = init_wl_gen(1024, 1, ZIP, DEL_100);
+
     run_wl_gen(gen);
     report_wl_gen(gen);
     free_wl_gen(gen);
@@ -218,7 +232,14 @@ large_scale_del_only()
 static void
 large_scale_get_intensive_only()
 {
-    wl_gen *gen = init_wl_gen(64, 24, SEQUENTIAL, SET_5_GET_95);
+    //wl_gen *gen = init_wl_gen(64, 24, SEQUENTIAL, SET_5_GET_95);
+    //wl_gen *gen = init_wl_gen(64, 24, RANDOM, SET_5_GET_95);
+    //wl_gen *gen = init_wl_gen(64, 24, ZIP, SET_5_GET_95);
+
+    //wl_gen *gen = init_wl_gen(1024, 24, SEQUENTIAL, SET_5_GET_95);
+    //wl_gen *gen = init_wl_gen(1024, 24, RANDOM, SET_5_GET_95);
+    wl_gen *gen = init_wl_gen(1024, 24, ZIP, SET_5_GET_95);
+
     run_wl_gen(gen);
     report_wl_gen(gen);
     free_wl_gen(gen);
