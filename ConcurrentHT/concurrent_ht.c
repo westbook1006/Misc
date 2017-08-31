@@ -5,6 +5,7 @@
  *   (1) concurrent cuckoo hashing;
  *   (2) optimistic locking;
  *   (3) single-writer/multi-reader;
+ *   (4) cache-friendly;
  */
 #include <stdio.h>
 #include <stdlib.h>
