@@ -1,5 +1,9 @@
 *.swp
 *.o
+*.ko
+*.order
+*.symvers
+*.cmd
 
 # Binaries
 test_main

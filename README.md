@@ -5,3 +5,4 @@ Other stuff I have tried:
 * RDTSC --> RDTSC instruction test
 * Zipf --> A zipf distribution generator
 * ConcurrentHT --> A concurrent hashtable implementation
+* HelloKM --> A simplest hello kernel module
